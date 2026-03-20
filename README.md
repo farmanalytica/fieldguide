@@ -14,8 +14,8 @@ Plugin para captura de pontos no mapa, armazenamento de coordenadas em WGS84 e a
 - `modules/map_tools.py`: utilitarios de mapa (ex.: adicionar camada Google Hybrid).
 - `modules/pdf/composer.py`: orquestracao da geracao de PDF sem acoplar regras em um unico arquivo.
 - `modules/pdf/canvas_snapshot.py`: captura da visao atual do canvas para inserir no PDF.
-- `modules/pdf/links.py`: geracao de links Google Maps por ponto (WGS84).
-- `modules/pdf/html_template.py`: template HTML com layout mobile-friendly para lista de pontos.
+- `modules/pdf/links.py`: geracao de links Google Maps por ponto e por rota (origem + paradas + destino).
+- `modules/pdf/html_template.py`: template HTML com cards de rota e lista mobile-friendly de pontos.
 - `modules/pdf/writer.py`: escrita de PDF usando Qt nativo (`QPrinter` + `QTextDocument`).
 - `resources.py` / `resources.qrc`: recursos Qt (icone e afins).
 - `metadata.txt`: metadados exigidos pelo QGIS Plugin Manager.
@@ -49,6 +49,11 @@ Plugin para captura de pontos no mapa, armazenamento de coordenadas em WGS84 e a
 
 - Botao `Limpar marcacoes` remove marcadores, labels e coordenadas salvas.
 
+### Remover ultima marcacao
+
+- Botao `Remover ultima marcacao` desfaz apenas o ultimo ponto adicionado.
+- Mantem os demais pontos no mapa e na lista de coordenadas.
+
 ### Inserir coordenadas manualmente
 
 1. Preencher `Latitude` e `Longitude` na secao `Adicionar coordenada manual (WGS84)`.
@@ -62,11 +67,24 @@ Plugin para captura de pontos no mapa, armazenamento de coordenadas em WGS84 e a
 ### Gerar PDF
 
 - Botao `Gerar PDF` abre o seletor de arquivo para salvar o relatorio.
+- O caminho inicial de salvamento abre na pasta Downloads do sistema (quando disponivel).
 - O PDF inclui:
 	- screenshot da visao atual do canvas (com marcacoes visiveis);
+	- link(s) de rota no Google Maps usando os pontos em ordem de captura;
 	- lista numerada de pontos em WGS84;
-	- links clicaveis grandes para Google Maps (`https://maps.google.com/?q=lat,lon`) com foco em uso mobile.
+	- links clicaveis grandes por ponto para Google Maps (`https://maps.google.com/?q=lat,lon`) com foco em uso mobile.
 - O metodo interno ainda pode manter o nome `generate_pfd` por compatibilidade de integracao, mas a funcionalidade agora e PDF real.
+
+### Abrir rota no Google Maps
+
+- Botao `Abrir rota no Google Maps` abre navegacao com todos os pontos como paradas, respeitando a ordem de captura.
+- Para muitos pontos, o plugin divide automaticamente em trechos para evitar falhas de abertura por limite de URL/paradas.
+
+### Limites praticos de rota (Google Maps)
+
+- Fluxo comum mobile: ate cerca de 9 paradas intermediarias por URL (com origem e destino).
+- Fluxo comum desktop/web: pode suportar mais paradas, mas varia por cliente e tamanho da URL.
+- Estrategia do plugin: usar divisao automatica em trechos para manter confiabilidade entre dispositivos.
 
 ### Camada Google Hybrid
 

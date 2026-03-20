@@ -49,6 +49,40 @@ def build_google_maps_directions_url(coordinates, travel_mode="driving"):
     return url
 
 
+def build_route_items(coordinates, max_points_per_route=10):
+    """Build one or more route links suitable for PDF rendering.
+
+    Splits long routes into overlapping chunks to respect waypoint limits.
+    """
+    if len(coordinates) < 2:
+        return []
+
+    route_items = []
+    start = 0
+    chunk_index = 1
+
+    while start < len(coordinates) - 1:
+        end = min(start + max_points_per_route, len(coordinates))
+        chunk = coordinates[start:end]
+        route_items.append(
+            {
+                "index": chunk_index,
+                "start_point": start + 1,
+                "end_point": end,
+                "point_count": len(chunk),
+                "url": build_google_maps_directions_url(chunk),
+            }
+        )
+
+        if end >= len(coordinates):
+            break
+
+        start = end - 1
+        chunk_index += 1
+
+    return route_items
+
+
 def build_mark_items(coordinates):
     """Transform (lon, lat) tuples into display rows used by the HTML template."""
     marks = []

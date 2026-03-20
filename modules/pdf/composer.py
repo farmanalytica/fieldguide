@@ -3,8 +3,8 @@
 import os
 
 from .canvas_snapshot import capture_canvas_snapshot
-from .html_template import build_points_html
-from .links import build_mark_items
+from .html_template import build_points_html_with_routes
+from .links import build_mark_items, build_route_items
 from .writer import write_report_to_pdf
 
 
@@ -27,7 +27,8 @@ class PdfReportComposer:
                 self.iface.mapCanvas(),
             )
             mark_items = build_mark_items(coordinates)
-            points_html = build_points_html(mark_items)
+            route_items = build_route_items(coordinates)
+            points_html = build_points_html_with_routes(mark_items, route_items)
             write_report_to_pdf(snapshot_path, points_html, output_path)
         finally:
             self._cleanup_temp_file(snapshot_path)
