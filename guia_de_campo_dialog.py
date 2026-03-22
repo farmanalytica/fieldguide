@@ -87,6 +87,7 @@ class GuiaDeCampoDialog(QtWidgets.QDialog):
         """Create all controls used by service actions."""
         super(GuiaDeCampoDialog, self).__init__(parent)
         self.plugin_language = plugin_language
+        self._refreshing_stylesheet = False
 
         self.setWindowTitle(self._t('Field Guide', 'Field Guide'))
         self.setWindowFlag(_qt_enum('WindowType', 'WindowStaysOnTopHint', 'WindowStaysOnTopHint'), True)
@@ -406,11 +407,18 @@ class GuiaDeCampoDialog(QtWidgets.QDialog):
 
     def changeEvent(self, event):
         """Refresh the stylesheet when the application palette changes."""
-        if event.type() in (
-            _event_type('PaletteChange', 'PaletteChange'),
-            _event_type('ApplicationPaletteChange', 'ApplicationPaletteChange'),
+        if (
+            not self._refreshing_stylesheet
+            and event.type() in (
+                _event_type('PaletteChange', 'PaletteChange'),
+                _event_type('ApplicationPaletteChange', 'ApplicationPaletteChange'),
+            )
         ):
-            self.setStyleSheet(self._build_stylesheet())
+            self._refreshing_stylesheet = True
+            try:
+                self.setStyleSheet(self._build_stylesheet())
+            finally:
+                self._refreshing_stylesheet = False
         super(GuiaDeCampoDialog, self).changeEvent(event)
 
     def _build_header(self, layout):

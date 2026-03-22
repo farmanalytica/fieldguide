@@ -17,9 +17,10 @@ def build_google_maps_url(latitude, longitude):
 
 
 def build_google_maps_directions_url(coordinates, travel_mode="driving"):
-    """Create a Google Maps directions URL using ordered points as stops.
+    """Create a Google Maps directions URL using current location as origin.
 
     Expects coordinates in (longitude, latitude) tuples.
+    Google Maps uses the device/browser current location when origin is omitted.
     """
     if len(coordinates) < 2:
         raise ValueError("Sao necessarios ao menos 2 pontos para montar rota.")
@@ -30,18 +31,16 @@ def build_google_maps_directions_url(coordinates, travel_mode="driving"):
             format_coordinate(longitude),
         )
 
-    origin = pair(coordinates[0][0], coordinates[0][1])
     destination = pair(coordinates[-1][0], coordinates[-1][1])
     url = (
         "https://www.google.com/maps/dir/?api=1&travelmode={mode}"
-        "&origin={origin}&destination={destination}"
+        "&destination={destination}"
     ).format(
         mode=quote(travel_mode, safe=""),
-        origin=quote(origin, safe=","),
         destination=quote(destination, safe=","),
     )
 
-    waypoints = [pair(lon, lat) for lon, lat in coordinates[1:-1]]
+    waypoints = [pair(lon, lat) for lon, lat in coordinates[:-1]]
     if waypoints:
         waypoints_value = "|".join(waypoints)
         url = "{}&waypoints={}".format(url, quote(waypoints_value, safe=",|"))
