@@ -27,12 +27,57 @@ import os
 from qgis.PyQt import QtCore, QtGui, QtWidgets
 
 
+def _qt_class_enum(qt_class, scoped_name, member_name, legacy_name):
+    """Return a Qt5/Qt6 compatible enum member from a Qt class."""
+    scoped_enum = getattr(qt_class, scoped_name, None)
+    if scoped_enum is not None:
+        return getattr(scoped_enum, member_name)
+    return getattr(qt_class, legacy_name)
+
+
 def _qt_enum(scoped_name, member_name, legacy_name):
     """Return a Qt5/Qt6 compatible enum member."""
     scoped_enum = getattr(QtCore.Qt, scoped_name, None)
     if scoped_enum is not None:
         return getattr(scoped_enum, member_name)
     return getattr(QtCore.Qt, legacy_name)
+
+
+def _widget_enum(widget_class, scoped_name, member_name, legacy_name):
+    """Return a Qt5/Qt6 compatible enum member from a widget class."""
+    return _qt_class_enum(widget_class, scoped_name, member_name, legacy_name)
+
+
+def _palette_role(member_name, legacy_name):
+    """Return a QPalette color role compatible with Qt5 and Qt6."""
+    return _qt_class_enum(QtGui.QPalette, 'ColorRole', member_name, legacy_name)
+
+
+def _event_type(member_name, legacy_name):
+    """Return a QEvent type compatible with Qt5 and Qt6."""
+    return _qt_class_enum(QtCore.QEvent, 'Type', member_name, legacy_name)
+
+
+def _color_to_hex(color):
+    """Return a stylesheet-ready RGB color string."""
+    return color.name()
+
+
+def _blend_colors(color_a, color_b, ratio):
+    """Blend two colors using the provided ratio for color_b."""
+    ratio = max(0.0, min(1.0, ratio))
+    inverse = 1.0 - ratio
+    return QtGui.QColor(
+        int(color_a.red() * inverse + color_b.red() * ratio),
+        int(color_a.green() * inverse + color_b.green() * ratio),
+        int(color_a.blue() * inverse + color_b.blue() * ratio),
+    )
+
+
+def _css_block(selector, *rules):
+    """Build a stylesheet block without f-string brace escaping issues."""
+    body = '\n'.join('            ' + rule for rule in rules)
+    return '{} {{\n{}\n        }}'.format(selector, body)
 
 
 class GuiaDeCampoDialog(QtWidgets.QDialog):
@@ -56,7 +101,7 @@ class GuiaDeCampoDialog(QtWidgets.QDialog):
 
         scroll_area = QtWidgets.QScrollArea(self)
         scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QtWidgets.QFrame.NoFrame)
+        scroll_area.setFrameShape(_widget_enum(QtWidgets.QFrame, 'Shape', 'NoFrame', 'NoFrame'))
         root_layout.addWidget(scroll_area)
 
         content = QtWidgets.QWidget(self)
@@ -81,205 +126,292 @@ class GuiaDeCampoDialog(QtWidgets.QDialog):
 
     def _build_stylesheet(self):
         """Return dialog stylesheet."""
-        return """
-        QDialog {
-            background: #f7fafc;
-            color: #1a202c;
-        }
-        QScrollArea {
-            background: transparent;
-        }
-        QLabel {
-            color: #1a202c;
-        }
-        QLabel#titleLabel {
-            font-size: 20px;
-            font-weight: 700;
-            color: #12324a;
-        }
-        QLabel#descriptionLabel {
-            color: #4a5568;
-            line-height: 1.4;
-        }
-        QLabel#websiteLabel {
-            color: #2b6cb0;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        QLabel#sectionHintLabel {
-            color: #4a5568;
-            font-size: 11px;
-        }
-        QLabel#statusBadge {
-            border-radius: 11px;
-            padding: 4px 10px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-        QLabel#statusBadge[inactive="true"] {
-            background: #edf2f7;
-            color: #4a5568;
-            border: 1px solid #cbd5e0;
-        }
-        QLabel#statusBadge[inactive="false"] {
-            background: #e6fffa;
-            color: #234e52;
-            border: 1px solid #81e6d9;
-        }
-        QGroupBox {
-            border: 1px solid #d7e0ea;
-            border-radius: 12px;
-            margin-top: 10px;
-            padding-top: 10px;
-            font-weight: 700;
-            background: #ffffff;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            left: 12px;
-            padding: 0 4px;
-            color: #12324a;
-        }
-        QPushButton {
-            min-height: 32px;
-            border-radius: 8px;
-            border: 1px solid #cbd5e0;
-            padding: 5px 10px;
-            font-weight: 600;
-            background-color: #f7fafc;
-            color: #1a202c;
-        }
-        QPushButton:hover {
-            background-color: #edf2f7;
-        }
-        QPushButton:pressed {
-            background-color: #e2e8f0;
-        }
-        QPushButton:disabled {
-            color: #90a4b7;
-            background-color: #f8fafc;
-            border-color: #e2e8f0;
-        }
-        QPushButton#hybridButton {
-            background-color: #ebfff7;
-            border: 1px solid #8bd5be;
-            color: #1f5f53;
-        }
-        QPushButton#hybridButton:hover {
-            background-color: #d7f8ec;
-        }
-        QPushButton#routeAllButton {
-            background-color: #ebfff7;
-            border: 1px solid #5cc7b6;
-            color: #1f5f53;
-        }
-        QPushButton#routeAllButton:hover {
-            background-color: #d7f8ec;
-        }
-        QPushButton#clearButton {
-            background-color: #fff5f5;
-            border: 1px solid #feb2b2;
-            color: #742a2a;
-        }
-        QPushButton#clearButton:hover {
-            background-color: #fed7d7;
-        }
-        QPushButton#removeLastButton {
-            background-color: #fffbea;
-            border: 1px solid #ecc94b;
-            color: #744210;
-        }
-        QPushButton#removeLastButton:hover {
-            background-color: #faf089;
-        }
-        QPushButton#csvExportButton {
-            background-color: #f0fff4;
-            border: 1px solid #9ae6b4;
-            color: #22543d;
-        }
-        QPushButton#csvExportButton:hover {
-            background-color: #c6f6d5;
-        }
-        QPushButton#csvImportButton {
-            background-color: #fffaf0;
-            border: 1px solid #f6ad55;
-            color: #744210;
-        }
-        QPushButton#csvImportButton:hover {
-            background-color: #feebc8;
-        }
-        QPushButton#generateButton {
-            background-color: #2b6cb0;
-            border: 1px solid #2c5282;
-            color: #ffffff;
-        }
-        QPushButton#generateButton:hover {
-            background-color: #2c5282;
-        }
-        QPushButton#generateButton:pressed {
-            background-color: #1a365d;
-        }
-        QPushButton#manualAddButton {
-            background-color: #ebf8ff;
-            border: 1px solid #90cdf4;
-            color: #1a365d;
-        }
-        QPushButton#manualAddButton:hover {
-            background-color: #bee3f8;
-        }
-        QCheckBox {
-            spacing: 6px;
-            color: #1a202c;
-            font-weight: 600;
-            padding: 2px 2px;
-        }
-        QCheckBox::indicator {
-            width: 18px;
-            height: 18px;
-            border-radius: 4px;
-            border: 1px solid #a0aec0;
-            background: #ffffff;
-        }
-        QCheckBox::indicator:hover {
-            border: 1px solid #2b6cb0;
-            background: #ebf8ff;
-        }
-        QCheckBox::indicator:checked {
-            border: 1px solid #2b6cb0;
-            background: #2b6cb0;
-            image: url(:/images/themes/default/mIconSuccess.svg);
-        }
-        QLineEdit {
-            min-height: 30px;
-            border: 1px solid #cbd5e0;
-            border-radius: 8px;
-            padding: 4px 8px;
-            background: #ffffff;
-            color: #1a202c;
-        }
-        QLineEdit:focus {
-            border: 1px solid #2b6cb0;
-        }
-        QListWidget {
-            border: 1px solid #d7e0ea;
-            border-radius: 10px;
-            background: #f8fbfd;
-            padding: 4px;
-        }
-        QListWidget::item {
-            padding: 7px 8px;
-            margin: 2px 0;
-            border-radius: 6px;
-        }
-        QListWidget::item:selected {
-            background: #dbeafe;
-            color: #12324a;
-        }
-        QFrame#lineSeparator {
-            background: #e2e8f0;
-            max-height: 1px;
-        }
-        """
+        palette = self.palette()
+        window = palette.color(_palette_role('Window', 'Window'))
+        base = palette.color(_palette_role('Base', 'Base'))
+        alt_base = palette.color(_palette_role('AlternateBase', 'AlternateBase'))
+        text = palette.color(_palette_role('WindowText', 'WindowText'))
+        button = palette.color(_palette_role('Button', 'Button'))
+        button_text = palette.color(_palette_role('ButtonText', 'ButtonText'))
+        highlight = palette.color(_palette_role('Highlight', 'Highlight'))
+        highlighted_text = palette.color(_palette_role('HighlightedText', 'HighlightedText'))
+        link = palette.color(_palette_role('Link', 'Link'))
+        mid = palette.color(_palette_role('Mid', 'Mid'))
+        is_dark = window.lightnessF() < 0.5
+
+        dialog_bg = _blend_colors(window, base, 0.18 if is_dark else 0.35)
+        panel_bg = _blend_colors(base, window, 0.16 if is_dark else 0.06)
+        panel_border = _blend_colors(mid, text, 0.18 if is_dark else 0.10)
+        subtle_text = _blend_colors(text, window, 0.32 if is_dark else 0.42)
+        muted_text = _blend_colors(text, window, 0.48 if is_dark else 0.58)
+        button_bg = _blend_colors(button, base, 0.30 if is_dark else 0.18)
+        button_hover = _blend_colors(button_bg, highlight, 0.14 if is_dark else 0.10)
+        button_pressed = _blend_colors(button_bg, highlight, 0.24 if is_dark else 0.18)
+        input_bg = _blend_colors(base, window, 0.08 if is_dark else 0.0)
+        list_bg = _blend_colors(alt_base, base, 0.30 if is_dark else 0.70)
+        separator = _blend_colors(panel_border, window, 0.20 if is_dark else 0.10)
+        title_chip_bg = _blend_colors(dialog_bg, panel_bg, 0.55 if is_dark else 0.75)
+        status_inactive_bg = _blend_colors(window, button, 0.45 if is_dark else 0.70)
+        status_inactive_border = _blend_colors(panel_border, button_text, 0.20)
+        success = QtGui.QColor('#4fd1c5' if is_dark else '#2f855a')
+        success_bg = _blend_colors(base, success, 0.20 if is_dark else 0.12)
+        success_border = _blend_colors(panel_border, success, 0.45)
+        info = QtGui.QColor('#63b3ed' if is_dark else '#3182ce')
+        warning = QtGui.QColor('#f6ad55' if is_dark else '#b7791f')
+        danger = QtGui.QColor('#fc8181' if is_dark else '#c53030')
+        neutral_green = QtGui.QColor('#68d391' if is_dark else '#2f855a')
+
+        blocks = [
+            _css_block(
+                'QDialog',
+                'background: {};'.format(_color_to_hex(dialog_bg)),
+                'color: {};'.format(_color_to_hex(text)),
+            ),
+            _css_block('QScrollArea', 'background: transparent;'),
+            _css_block('QLabel', 'color: {};'.format(_color_to_hex(text))),
+            _css_block(
+                'QLabel#titleLabel',
+                'font-size: 20px;',
+                'font-weight: 700;',
+                'color: {};'.format(_color_to_hex(text)),
+            ),
+            _css_block(
+                'QLabel#descriptionLabel',
+                'color: {};'.format(_color_to_hex(subtle_text)),
+                'line-height: 1.4;',
+            ),
+            _css_block(
+                'QLabel#websiteLabel',
+                'color: {};'.format(_color_to_hex(link)),
+                'font-size: 11px;',
+                'font-weight: 600;',
+            ),
+            _css_block(
+                'QLabel#sectionHintLabel',
+                'color: {};'.format(_color_to_hex(subtle_text)),
+                'font-size: 11px;',
+            ),
+            _css_block(
+                'QLabel#statusBadge',
+                'border-radius: 11px;',
+                'padding: 4px 10px;',
+                'font-size: 11px;',
+                'font-weight: 700;',
+            ),
+            _css_block(
+                'QLabel#statusBadge[inactive="true"]',
+                'background: {};'.format(_color_to_hex(status_inactive_bg)),
+                'color: {};'.format(_color_to_hex(subtle_text)),
+                'border: 1px solid {};'.format(_color_to_hex(status_inactive_border)),
+            ),
+            _css_block(
+                'QLabel#statusBadge[inactive="false"]',
+                'background: {};'.format(_color_to_hex(success_bg)),
+                'color: {};'.format(_color_to_hex(text)),
+                'border: 1px solid {};'.format(_color_to_hex(success_border)),
+            ),
+            _css_block(
+                'QGroupBox',
+                'border: 1px solid {};'.format(_color_to_hex(panel_border)),
+                'border-radius: 12px;',
+                'margin-top: 18px;',
+                'padding-top: 16px;',
+                'font-weight: 700;',
+                'background: {};'.format(_color_to_hex(panel_bg)),
+            ),
+            _css_block(
+                'QGroupBox::title',
+                'subcontrol-origin: margin;',
+                'subcontrol-position: top left;',
+                'left: 12px;',
+                'top: -2px;',
+                'padding: 2px 8px;',
+                'border: 1px solid {};'.format(_color_to_hex(panel_border)),
+                'border-radius: 7px;',
+                'background: {};'.format(_color_to_hex(title_chip_bg)),
+                'color: {};'.format(_color_to_hex(text)),
+            ),
+            _css_block(
+                'QPushButton',
+                'min-height: 32px;',
+                'border-radius: 8px;',
+                'border: 1px solid {};'.format(_color_to_hex(panel_border)),
+                'padding: 5px 10px;',
+                'font-weight: 600;',
+                'background-color: {};'.format(_color_to_hex(button_bg)),
+                'color: {};'.format(_color_to_hex(button_text)),
+            ),
+            _css_block('QPushButton:hover', 'background-color: {};'.format(_color_to_hex(button_hover))),
+            _css_block('QPushButton:pressed', 'background-color: {};'.format(_color_to_hex(button_pressed))),
+            _css_block(
+                'QPushButton:disabled',
+                'color: {};'.format(_color_to_hex(muted_text)),
+                'background-color: {};'.format(_color_to_hex(panel_bg)),
+                'border-color: {};'.format(_color_to_hex(separator)),
+            ),
+            _css_block(
+                'QPushButton#hybridButton',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, neutral_green, 0.18 if is_dark else 0.10))),
+                'border: 1px solid {};'.format(_color_to_hex(_blend_colors(panel_border, neutral_green, 0.50))),
+                'color: {};'.format(_color_to_hex(text)),
+            ),
+            _css_block(
+                'QPushButton#hybridButton:hover',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, neutral_green, 0.28 if is_dark else 0.16))),
+            ),
+            _css_block(
+                'QPushButton#routeAllButton',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, success, 0.20 if is_dark else 0.11))),
+                'border: 1px solid {};'.format(_color_to_hex(_blend_colors(panel_border, success, 0.52))),
+                'color: {};'.format(_color_to_hex(text)),
+            ),
+            _css_block(
+                'QPushButton#routeAllButton:hover',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, success, 0.30 if is_dark else 0.18))),
+            ),
+            _css_block(
+                'QPushButton#clearButton',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, danger, 0.18 if is_dark else 0.10))),
+                'border: 1px solid {};'.format(_color_to_hex(_blend_colors(panel_border, danger, 0.55))),
+                'color: {};'.format(_color_to_hex(text)),
+            ),
+            _css_block(
+                'QPushButton#clearButton:hover',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, danger, 0.28 if is_dark else 0.16))),
+            ),
+            _css_block(
+                'QPushButton#removeLastButton',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, warning, 0.18 if is_dark else 0.10))),
+                'border: 1px solid {};'.format(_color_to_hex(_blend_colors(panel_border, warning, 0.50))),
+                'color: {};'.format(_color_to_hex(text)),
+            ),
+            _css_block(
+                'QPushButton#removeLastButton:hover',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, warning, 0.28 if is_dark else 0.16))),
+            ),
+            _css_block(
+                'QPushButton#csvExportButton',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, success, 0.16 if is_dark else 0.09))),
+                'border: 1px solid {};'.format(_color_to_hex(_blend_colors(panel_border, success, 0.46))),
+                'color: {};'.format(_color_to_hex(text)),
+            ),
+            _css_block(
+                'QPushButton#csvExportButton:hover',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, success, 0.25 if is_dark else 0.14))),
+            ),
+            _css_block(
+                'QPushButton#csvImportButton',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, warning, 0.15 if is_dark else 0.09))),
+                'border: 1px solid {};'.format(_color_to_hex(_blend_colors(panel_border, warning, 0.45))),
+                'color: {};'.format(_color_to_hex(text)),
+            ),
+            _css_block(
+                'QPushButton#csvImportButton:hover',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, warning, 0.24 if is_dark else 0.14))),
+            ),
+            _css_block(
+                'QPushButton#generateButton',
+                'background-color: {};'.format(_color_to_hex(highlight)),
+                'border: 1px solid {};'.format(_color_to_hex(_blend_colors(highlight, panel_border, 0.20))),
+                'color: {};'.format(_color_to_hex(highlighted_text)),
+            ),
+            _css_block(
+                'QPushButton#generateButton:hover',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(highlight, info, 0.18))),
+            ),
+            _css_block(
+                'QPushButton#generateButton:pressed',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(highlight, text, 0.20 if is_dark else 0.10))),
+            ),
+            _css_block(
+                'QPushButton#manualAddButton',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, info, 0.16 if is_dark else 0.10))),
+                'border: 1px solid {};'.format(_color_to_hex(_blend_colors(panel_border, info, 0.48))),
+                'color: {};'.format(_color_to_hex(text)),
+            ),
+            _css_block(
+                'QPushButton#manualAddButton:hover',
+                'background-color: {};'.format(_color_to_hex(_blend_colors(base, info, 0.26 if is_dark else 0.16))),
+            ),
+            _css_block(
+                'QCheckBox',
+                'spacing: 6px;',
+                'color: {};'.format(_color_to_hex(text)),
+                'font-weight: 600;',
+                'padding: 2px 2px;',
+            ),
+            _css_block(
+                'QCheckBox::indicator',
+                'width: 18px;',
+                'height: 18px;',
+                'border-radius: 4px;',
+                'border: 1px solid {};'.format(_color_to_hex(panel_border)),
+                'background: {};'.format(_color_to_hex(input_bg)),
+            ),
+            _css_block(
+                'QCheckBox::indicator:hover',
+                'border: 1px solid {};'.format(_color_to_hex(highlight)),
+                'background: {};'.format(_color_to_hex(_blend_colors(input_bg, highlight, 0.14 if is_dark else 0.08))),
+            ),
+            _css_block(
+                'QCheckBox::indicator:checked',
+                'border: 1px solid {};'.format(_color_to_hex(highlight)),
+                'background: {};'.format(_color_to_hex(highlight)),
+                'image: url(:/images/themes/default/mIconSuccess.svg);',
+            ),
+            _css_block(
+                'QLineEdit',
+                'min-height: 30px;',
+                'border: 1px solid {};'.format(_color_to_hex(panel_border)),
+                'border-radius: 8px;',
+                'padding: 4px 8px;',
+                'background: {};'.format(_color_to_hex(input_bg)),
+                'color: {};'.format(_color_to_hex(text)),
+                'selection-background-color: {};'.format(_color_to_hex(highlight)),
+                'selection-color: {};'.format(_color_to_hex(highlighted_text)),
+            ),
+            _css_block('QLineEdit:focus', 'border: 1px solid {};'.format(_color_to_hex(highlight))),
+            _css_block(
+                'QListWidget',
+                'border: 1px solid {};'.format(_color_to_hex(panel_border)),
+                'border-radius: 10px;',
+                'background: {};'.format(_color_to_hex(list_bg)),
+                'color: {};'.format(_color_to_hex(text)),
+                'padding: 4px;',
+            ),
+            _css_block(
+                'QListWidget:disabled',
+                'background: {};'.format(_color_to_hex(list_bg)),
+                'color: {};'.format(_color_to_hex(subtle_text)),
+                'border: 1px solid {};'.format(_color_to_hex(panel_border)),
+            ),
+            _css_block(
+                'QListWidget::item',
+                'padding: 7px 8px;',
+                'margin: 2px 0;',
+                'border-radius: 6px;',
+            ),
+            _css_block(
+                'QListWidget::item:selected',
+                'background: {};'.format(_color_to_hex(highlight)),
+                'color: {};'.format(_color_to_hex(highlighted_text)),
+            ),
+            _css_block(
+                'QFrame#lineSeparator',
+                'background: {};'.format(_color_to_hex(separator)),
+                'max-height: 1px;',
+            ),
+        ]
+        return '\n'.join(blocks)
+
+    def changeEvent(self, event):
+        """Refresh the stylesheet when the application palette changes."""
+        if event.type() in (
+            _event_type('PaletteChange', 'PaletteChange'),
+            _event_type('ApplicationPaletteChange', 'ApplicationPaletteChange'),
+        ):
+            self.setStyleSheet(self._build_stylesheet())
+        super(GuiaDeCampoDialog, self).changeEvent(event)
 
     def _build_header(self, layout):
         """Build top header area."""
@@ -401,9 +533,35 @@ class GuiaDeCampoDialog(QtWidgets.QDialog):
         state_layout.addWidget(self.points_list_hint_label)
 
         self.points_list_widget = QtWidgets.QListWidget(self)
-        self.points_list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.points_list_widget.setSelectionMode(
+            _widget_enum(
+                QtWidgets.QAbstractItemView,
+                'SelectionMode',
+                'SingleSelection',
+                'SingleSelection',
+            )
+        )
         self.points_list_widget.setMinimumHeight(170)
         state_layout.addWidget(self.points_list_widget)
+
+        session_actions_layout = QtWidgets.QHBoxLayout()
+        session_actions_layout.setSpacing(8)
+
+        self.remove_last_mark_button = QtWidgets.QPushButton(
+            self._t('Remove last mark', 'Remover ultima marcacao'),
+            self,
+        )
+        self.remove_last_mark_button.setObjectName('removeLastButton')
+        session_actions_layout.addWidget(self.remove_last_mark_button)
+
+        self.clear_marks_button = QtWidgets.QPushButton(
+            self._t('Clear marks', 'Limpar marcacoes'),
+            self,
+        )
+        self.clear_marks_button.setObjectName('clearButton')
+        session_actions_layout.addWidget(self.clear_marks_button)
+
+        state_layout.addLayout(session_actions_layout)
         layout.addWidget(state_group)
 
     def _build_manual_group(self, layout):
@@ -452,9 +610,9 @@ class GuiaDeCampoDialog(QtWidgets.QDialog):
         layout.addWidget(manual_group)
 
     def _build_manage_group(self, layout):
-        """Build point management section."""
+        """Build route section."""
         manage_group = QtWidgets.QGroupBox(
-            self._t('Points', 'Pontos'),
+            self._t('Route', 'Rota'),
             self,
         )
         manage_layout = QtWidgets.QVBoxLayout(manage_group)
@@ -463,8 +621,8 @@ class GuiaDeCampoDialog(QtWidgets.QDialog):
 
         manage_hint = QtWidgets.QLabel(
             self._t(
-                'Remove the last point, clear the session, or open the current route when enough points exist.',
-                'Remova o ultimo ponto, limpe a sessao ou abra a rota atual quando houver pontos suficientes.',
+                'Open the current route in Google Maps when at least 2 points exist.',
+                'Abra a rota atual no Google Maps quando houver ao menos 2 pontos.',
             ),
             self,
         )
@@ -478,25 +636,6 @@ class GuiaDeCampoDialog(QtWidgets.QDialog):
         )
         self.route_all_points_button.setObjectName('routeAllButton')
         manage_layout.addWidget(self.route_all_points_button)
-
-        destructive_layout = QtWidgets.QHBoxLayout()
-        destructive_layout.setSpacing(8)
-
-        self.remove_last_mark_button = QtWidgets.QPushButton(
-            self._t('Remove last mark', 'Remover ultima marcacao'),
-            self,
-        )
-        self.remove_last_mark_button.setObjectName('removeLastButton')
-        destructive_layout.addWidget(self.remove_last_mark_button)
-
-        self.clear_marks_button = QtWidgets.QPushButton(
-            self._t('Clear marks', 'Limpar marcacoes'),
-            self,
-        )
-        self.clear_marks_button.setObjectName('clearButton')
-        destructive_layout.addWidget(self.clear_marks_button)
-
-        manage_layout.addLayout(destructive_layout)
         layout.addWidget(manage_group)
 
     def _build_output_group(self, layout):
@@ -541,7 +680,7 @@ class GuiaDeCampoDialog(QtWidgets.QDialog):
 
         separator = QtWidgets.QFrame(self)
         separator.setObjectName('lineSeparator')
-        separator.setFrameShape(QtWidgets.QFrame.HLine)
+        separator.setFrameShape(_widget_enum(QtWidgets.QFrame, 'Shape', 'HLine', 'HLine'))
         output_layout.addWidget(separator)
 
         self.generate_pfd_button = QtWidgets.QPushButton(
@@ -618,8 +757,8 @@ class GuiaDeCampoDialog(QtWidgets.QDialog):
                 'Nenhum ponto capturado ainda. Ative o modo de captura ou adicione coordenadas manualmente.',
             )
             self.points_list_widget.addItem(empty_text)
-            self.points_list_widget.setCurrentRow(0)
-            self.points_list_widget.setEnabled(False)
+            self.points_list_widget.clearSelection()
+            self.points_list_widget.setEnabled(True)
             self.last_point_value_label.setText(self._t('No points yet', 'Nenhum ponto ainda'))
             self.route_status_value_label.setText(
                 self._t('Add at least 2 points', 'Adicione ao menos 2 pontos')

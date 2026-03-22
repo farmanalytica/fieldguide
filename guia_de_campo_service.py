@@ -1,15 +1,42 @@
-from qgis.core import Qgis
+from qgis.core import Qgis, QgsMessageLog
 from qgis.PyQt.QtCore import QStandardPaths, QUrl
 from qgis.PyQt.QtGui import QDesktopServices
 from qgis.PyQt.QtWidgets import QFileDialog, QMessageBox
 
 import csv
 import os
+import traceback
 
 from .modules.canvas_marker_tool import CanvasMarkerTool
 from .modules.map_tools import hybrid_function
 from .modules.pdf.links import build_google_maps_directions_url
 from .modules.pdf import PdfReportComposer
+
+
+def _qt_class_enum(qt_class, scoped_name, member_name, legacy_name):
+    """Return a Qt5/Qt6 compatible enum member from a Qt class."""
+    scoped_enum = getattr(qt_class, scoped_name, None)
+    if scoped_enum is not None:
+        return getattr(scoped_enum, member_name)
+    return getattr(qt_class, legacy_name)
+
+
+def _standard_location(member_name, legacy_name):
+    """Return a QStandardPaths location enum compatible with Qt5 and Qt6."""
+    return _qt_class_enum(QStandardPaths, 'StandardLocation', member_name, legacy_name)
+
+
+def _message_box_enum(scoped_name, member_name, legacy_name):
+    """Return a QMessageBox enum member compatible with Qt5 and Qt6."""
+    return _qt_class_enum(QMessageBox, scoped_name, member_name, legacy_name)
+
+
+def _message_box_exec(message_box):
+    """Execute a QMessageBox across Qt5/Qt6 naming differences."""
+    exec_method = getattr(message_box, 'exec', None)
+    if callable(exec_method):
+        return exec_method()
+    return message_box.exec_()
 
 
 class GuiaDeCampoService:
@@ -42,6 +69,19 @@ class GuiaDeCampoService:
         if self.dialog is not None:
             return self.dialog
         return self.iface.mainWindow()
+
+    def _default_output_path(self, filename):
+        """Return a sensible default save path on both Qt5 and Qt6 builds."""
+        download_dir = QStandardPaths.writableLocation(
+            _standard_location('DownloadLocation', 'DownloadLocation')
+        )
+        if not download_dir:
+            download_dir = QStandardPaths.writableLocation(
+                _standard_location('DocumentsLocation', 'DocumentsLocation')
+            )
+        if not download_dir:
+            return filename
+        return os.path.join(download_dir, filename)
 
     def toggle_mark_mode(self, enabled):
         """Enable or disable interactive point capture from the checkbox."""
@@ -93,6 +133,8 @@ class GuiaDeCampoService:
             return
 
         if n > 3:
+            yes_button = _message_box_enum('StandardButton', 'Yes', 'Yes')
+            no_button = _message_box_enum('StandardButton', 'No', 'No')
             confirmation = QMessageBox.question(
                 self._dialog_parent(),
                 self._t('Clear marks', 'Limpar marcacoes'),
@@ -100,10 +142,10 @@ class GuiaDeCampoService:
                     'Clear all {} captured point(s)?'.format(n),
                     'Limpar todos os {} ponto(s) capturados?'.format(n),
                 ),
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No,
+                yes_button | no_button,
+                no_button,
             )
-            if confirmation != QMessageBox.Yes:
+            if confirmation != yes_button:
                 return
 
         self.marker_tool.clear()
@@ -351,8 +393,7 @@ class GuiaDeCampoService:
             )
             return
 
-        download_dir = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)
-        default_csv_path = os.path.join(download_dir, 'field_guide_points.csv') if download_dir else 'field_guide_points.csv'
+        default_csv_path = self._default_output_path('field_guide_points.csv')
 
         output_path, _ = QFileDialog.getSaveFileName(
             self._dialog_parent(),
@@ -513,8 +554,7 @@ class GuiaDeCampoService:
             )
             return
 
-        download_dir = QStandardPaths.writableLocation(QStandardPaths.DownloadLocation)
-        default_pdf_path = os.path.join(download_dir, 'field_guide.pdf') if download_dir else 'field_guide.pdf'
+        default_pdf_path = self._default_output_path('field_guide.pdf')
 
         output_path, _ = QFileDialog.getSaveFileName(
             self._dialog_parent(),
@@ -527,12 +567,25 @@ class GuiaDeCampoService:
 
         try:
             final_path = self.pdf_composer.generate(coordinates, output_path)
-        except Exception:
+        except Exception as exc:
+            QgsMessageLog.logMessage(
+                traceback.format_exc(),
+                'Field Guide',
+                level=Qgis.Critical,
+            )
+            error_detail = str(exc).strip()
+            if error_detail:
+                user_message = self._t(
+                    'Error generating PDF: {}'.format(error_detail),
+                    'Erro ao gerar PDF: {}'.format(error_detail),
+                )
+            else:
+                user_message = self._t('Error generating PDF.', 'Erro ao gerar PDF.')
             self.iface.messageBar().pushMessage(
                 self._t('Field Guide', 'Guia de Campo'),
-                self._t('Error generating PDF.', 'Erro ao gerar PDF.'),
+                user_message,
                 level=Qgis.Critical,
-                duration=6,
+                duration=8,
             )
             return
 
@@ -558,7 +611,7 @@ class GuiaDeCampoService:
     def _choose_import_mode(self, existing_points):
         """Ask whether CSV import should append to or replace current points."""
         message_box = QMessageBox(self._dialog_parent())
-        message_box.setIcon(QMessageBox.Question)
+        message_box.setIcon(_message_box_enum('Icon', 'Question', 'Question'))
         message_box.setWindowTitle(self._t('Import points CSV', 'Importar pontos CSV'))
         message_box.setText(
             self._t(
@@ -574,18 +627,18 @@ class GuiaDeCampoService:
         )
         append_button = message_box.addButton(
             self._t('Append', 'Adicionar'),
-            QMessageBox.AcceptRole,
+            _message_box_enum('ButtonRole', 'AcceptRole', 'AcceptRole'),
         )
         replace_button = message_box.addButton(
             self._t('Replace', 'Substituir'),
-            QMessageBox.DestructiveRole,
+            _message_box_enum('ButtonRole', 'DestructiveRole', 'DestructiveRole'),
         )
         cancel_button = message_box.addButton(
             self._t('Cancel', 'Cancelar'),
-            QMessageBox.RejectRole,
+            _message_box_enum('ButtonRole', 'RejectRole', 'RejectRole'),
         )
         message_box.setDefaultButton(append_button)
-        message_box.exec_()
+        _message_box_exec(message_box)
 
         clicked = message_box.clickedButton()
         if clicked == append_button:

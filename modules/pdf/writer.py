@@ -5,22 +5,59 @@ import os
 from qgis.PyQt import QtCore, QtGui, QtPrintSupport
 
 
+def _qt_class_enum(qt_class, scoped_name, member_name, legacy_name):
+    """Return a Qt5/Qt6 compatible enum member from a Qt class."""
+    scoped_enum = getattr(qt_class, scoped_name, None)
+    if scoped_enum is not None:
+        return getattr(scoped_enum, member_name)
+    return getattr(qt_class, legacy_name)
+
+
+def _printer_enum(scoped_name, member_name, legacy_name):
+    """Return a QPrinter enum member compatible with Qt5 and Qt6."""
+    return _qt_class_enum(QtPrintSupport.QPrinter, scoped_name, member_name, legacy_name)
+
+
+def _page_size_id(member_name, legacy_name):
+    """Return a QPageSize enum member compatible with Qt5 and Qt6."""
+    return _qt_class_enum(QtGui.QPageSize, 'PageSizeId', member_name, legacy_name)
+
+
+def _page_layout_enum(member_name, legacy_name):
+    """Return a QPageLayout enum member compatible with Qt5 and Qt6."""
+    return _qt_class_enum(QtGui.QPageLayout, 'Orientation', member_name, legacy_name)
+
+
+def _page_layout_unit(member_name, legacy_name):
+    """Return a QPageLayout unit enum compatible with Qt5 and Qt6."""
+    return _qt_class_enum(QtGui.QPageLayout, 'Unit', member_name, legacy_name)
+
+
 def _create_printer(output_path):
     """Create an A4 landscape PDF printer configured for edge-to-edge content."""
-    printer = QtPrintSupport.QPrinter(QtPrintSupport.QPrinter.HighResolution)
-    printer.setOutputFormat(QtPrintSupport.QPrinter.PdfFormat)
+    printer = QtPrintSupport.QPrinter(_printer_enum('PrinterMode', 'HighResolution', 'HighResolution'))
+    printer.setOutputFormat(_printer_enum('OutputFormat', 'PdfFormat', 'PdfFormat'))
     printer.setOutputFileName(output_path)
-    printer.setPageSize(QtGui.QPageSize(QtGui.QPageSize.A4))
-    printer.setOrientation(QtPrintSupport.QPrinter.Landscape)
+    printer.setPageSize(QtGui.QPageSize(_page_size_id('A4', 'A4')))
+    if hasattr(printer, 'setPageOrientation'):
+        printer.setPageOrientation(_page_layout_enum('Landscape', 'Landscape'))
+    else:
+        printer.setOrientation(_printer_enum('Orientation', 'Landscape', 'Landscape'))
     # Use the full PDF page area; margins are controlled by document CSS instead.
     printer.setFullPage(True)
-    printer.setPageMargins(
-        10,
-        10,
-        10,
-        10,
-        QtPrintSupport.QPrinter.Millimeter,
-    )
+    try:
+        printer.setPageMargins(
+            QtCore.QMarginsF(10, 10, 10, 10),
+            _page_layout_unit('Millimeter', 'Millimeter'),
+        )
+    except TypeError:
+        printer.setPageMargins(
+            10,
+            10,
+            10,
+            10,
+            _printer_enum('Unit', 'Millimeter', 'Millimeter'),
+        )
     return printer
 
 
@@ -48,13 +85,13 @@ def write_report_to_pdf(snapshot_path, points_html, output_path):
     if image.isNull() or image.width() <= 0 or image.height() <= 0:
         raise RuntimeError("Nao foi possivel carregar a imagem do mapa para o PDF.")
 
-    page_rect = QtCore.QRectF(printer.paperRect(QtPrintSupport.QPrinter.DevicePixel))
+    page_rect = QtCore.QRectF(printer.paperRect(_printer_enum('Unit', 'DevicePixel', 'DevicePixel')))
     if page_rect.width() <= 0 or page_rect.height() <= 0:
-        page_rect = QtCore.QRectF(printer.pageRect(QtPrintSupport.QPrinter.DevicePixel))
+        page_rect = QtCore.QRectF(printer.pageRect(_printer_enum('Unit', 'DevicePixel', 'DevicePixel')))
 
-    text_page_rect = QtCore.QRectF(printer.paperRect(QtPrintSupport.QPrinter.Point))
+    text_page_rect = QtCore.QRectF(printer.paperRect(_printer_enum('Unit', 'Point', 'Point')))
     if text_page_rect.width() <= 0 or text_page_rect.height() <= 0:
-        text_page_rect = QtCore.QRectF(printer.pageRect(QtPrintSupport.QPrinter.Point))
+        text_page_rect = QtCore.QRectF(printer.pageRect(_printer_enum('Unit', 'Point', 'Point')))
 
     scale_x = float(page_rect.width()) / float(text_page_rect.width()) if text_page_rect.width() > 0 else 1.0
     scale_y = float(page_rect.height()) / float(text_page_rect.height()) if text_page_rect.height() > 0 else 1.0
@@ -65,7 +102,10 @@ def write_report_to_pdf(snapshot_path, points_html, output_path):
 
     try:
         painter.fillRect(page_rect, QtGui.QColor("white"))
-        painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, True)
+        painter.setRenderHint(
+            _qt_class_enum(QtGui.QPainter, 'RenderHint', 'SmoothPixmapTransform', 'SmoothPixmapTransform'),
+            True,
+        )
         draw_rect = _fit_rect_inside(image.width(), image.height(), page_rect)
         painter.drawImage(draw_rect, image)
 
