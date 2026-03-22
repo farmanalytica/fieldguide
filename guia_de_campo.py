@@ -207,6 +207,7 @@ class GuiaDeCampo:
         if self.first_start == True:
             self.first_start = False
             self.dlg = GuiaDeCampoDialog(self.plugin_language)
+            self.service.bind_dialog(self.dlg)
 
             # Connect dialog controls to service methods once per QGIS session.
             self.dlg.hybrid_layer_button.clicked.connect(
@@ -228,6 +229,9 @@ class GuiaDeCampo:
                 self.service.toggle_mark_mode
             )
             self.dlg.add_manual_coordinate_button.clicked.connect(
+                lambda: self.service.add_manual_coordinate(self.dlg)
+            )
+            self.dlg.manual_longitude_input.returnPressed.connect(
                 lambda: self.service.add_manual_coordinate(self.dlg)
             )
             self.dlg.export_csv_button.clicked.connect(

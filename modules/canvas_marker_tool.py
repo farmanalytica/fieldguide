@@ -4,6 +4,7 @@ This module is intentionally isolated from the service layer so map interaction
 logic (tool switching, coordinate capture, marker drawing) can be reused.
 """
 
+from qgis.PyQt import QtCore
 from qgis.PyQt.QtCore import QPointF, QSizeF, Qt
 from qgis.PyQt.QtGui import QColor, QTextDocument
 from qgis.core import (
@@ -25,10 +26,13 @@ def _qt_mouse_button(member_name, legacy_name):
     return getattr(Qt, legacy_name)
 
 
-class CanvasMarkerTool:
+class CanvasMarkerTool(QtCore.QObject):
     """Handle map-click point capture and visual feedback on canvas."""
 
+    coordinates_changed = QtCore.pyqtSignal(list)
+
     def __init__(self, iface, plugin_language='en'):
+        super(CanvasMarkerTool, self).__init__()
         self.iface = iface
         self.plugin_language = plugin_language
         self.canvas = self.iface.mapCanvas()
@@ -139,6 +143,7 @@ class CanvasMarkerTool:
             level=Qgis.Success,
             duration=2,
         )
+        self.coordinates_changed.emit(list(self.coordinates))
 
     def clear(self):
         """Remove all marker graphics and reset captured coordinates."""
@@ -151,6 +156,7 @@ class CanvasMarkerTool:
         self._markers = []
         self._label_items = []
         self.coordinates = []
+        self.coordinates_changed.emit(list(self.coordinates))
 
     def remove_last(self):
         """Remove only the most recently added mark and coordinate."""
@@ -167,4 +173,5 @@ class CanvasMarkerTool:
             label_item = self._label_items.pop()
             self.canvas.scene().removeItem(label_item)
 
+        self.coordinates_changed.emit(list(self.coordinates))
         return True

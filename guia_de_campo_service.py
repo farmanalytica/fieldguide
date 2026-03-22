@@ -1,7 +1,7 @@
 from qgis.core import Qgis
 from qgis.PyQt.QtCore import QStandardPaths, QUrl
 from qgis.PyQt.QtGui import QDesktopServices
-from qgis.PyQt.QtWidgets import QFileDialog
+from qgis.PyQt.QtWidgets import QFileDialog, QMessageBox
 
 import csv
 import os
@@ -23,12 +23,25 @@ class GuiaDeCampoService:
         self.plugin_language = plugin_language
         self.marker_tool = CanvasMarkerTool(self.iface, self.plugin_language)
         self.pdf_composer = PdfReportComposer(self.iface, self.plugin_language)
+        self.dialog = None
 
     def _t(self, english_text, portuguese_text):
         """Return pt-BR text only when plugin language is Portuguese."""
         if self.plugin_language == 'pt_BR':
             return portuguese_text
         return english_text
+
+    def bind_dialog(self, dialog):
+        """Keep dialog state synced with the current marker session."""
+        self.dialog = dialog
+        self.marker_tool.coordinates_changed.connect(self.dialog.set_points)
+        self.dialog.set_points(self.marker_tool.coordinates)
+
+    def _dialog_parent(self):
+        """Return the best available parent widget for child dialogs."""
+        if self.dialog is not None:
+            return self.dialog
+        return self.iface.mainWindow()
 
     def toggle_mark_mode(self, enabled):
         """Enable or disable interactive point capture from the checkbox."""
@@ -70,6 +83,29 @@ class GuiaDeCampoService:
     def clear_marks(self):
         """Remove all map marks and reset stored coordinate state."""
         n = len(self.marker_tool.coordinates)
+        if n == 0:
+            self.iface.messageBar().pushMessage(
+                self._t('Field Guide', 'Guia de Campo'),
+                self._t('No marks to clear.', 'Nenhuma marcacao para limpar.'),
+                level=Qgis.Warning,
+                duration=3,
+            )
+            return
+
+        if n > 3:
+            confirmation = QMessageBox.question(
+                self._dialog_parent(),
+                self._t('Clear marks', 'Limpar marcacoes'),
+                self._t(
+                    'Clear all {} captured point(s)?'.format(n),
+                    'Limpar todos os {} ponto(s) capturados?'.format(n),
+                ),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if confirmation != QMessageBox.Yes:
+                return
+
         self.marker_tool.clear()
         self.iface.messageBar().pushMessage(
             self._t('Field Guide', 'Guia de Campo'),
@@ -173,6 +209,17 @@ class GuiaDeCampoService:
                 duration=5,
             )
             return
+
+        if len(route_urls) > 1:
+            self.iface.messageBar().pushMessage(
+                self._t('Field Guide', 'Guia de Campo'),
+                self._t(
+                    'Large route detected. Opening {} Google Maps segments.'.format(len(route_urls)),
+                    'Rota grande detectada. Abrindo {} trechos no Google Maps.'.format(len(route_urls)),
+                ),
+                level=Qgis.Info,
+                duration=5,
+            )
 
         opened_count = 0
         for url in route_urls:
@@ -308,7 +355,7 @@ class GuiaDeCampoService:
         default_csv_path = os.path.join(download_dir, 'field_guide_points.csv') if download_dir else 'field_guide_points.csv'
 
         output_path, _ = QFileDialog.getSaveFileName(
-            None,
+            self._dialog_parent(),
             self._t('Save points to CSV', 'Salvar pontos em CSV'),
             default_csv_path,
             'CSV Files (*.csv)',
@@ -345,7 +392,7 @@ class GuiaDeCampoService:
     def import_marks_csv(self):
         """Import WGS84 points from CSV and draw them on the map canvas."""
         input_path, _ = QFileDialog.getOpenFileName(
-            None,
+            self._dialog_parent(),
             self._t('Import points CSV', 'Importar pontos CSV'),
             '',
             'CSV Files (*.csv);;All Files (*)',
@@ -353,7 +400,14 @@ class GuiaDeCampoService:
         if not input_path:
             return
 
-        imported_count = 0
+        import_mode = 'append'
+        existing_points = len(self.marker_tool.coordinates)
+        if existing_points > 0:
+            import_mode = self._choose_import_mode(existing_points)
+            if import_mode is None:
+                return
+
+        valid_points = []
         skipped_count = 0
 
         try:
@@ -388,8 +442,15 @@ class GuiaDeCampoService:
                         skipped_count += 1
                         continue
 
-                    self.marker_tool.add_wgs84_point(latitude, longitude)
-                    imported_count += 1
+                    valid_points.append((latitude, longitude))
+        except ValueError as exc:
+            self.iface.messageBar().pushMessage(
+                self._t('Field Guide', 'Guia de Campo'),
+                str(exc),
+                level=Qgis.Warning,
+                duration=6,
+            )
+            return
         except Exception:
             self.iface.messageBar().pushMessage(
                 self._t('Field Guide', 'Guia de Campo'),
@@ -399,6 +460,7 @@ class GuiaDeCampoService:
             )
             return
 
+        imported_count = len(valid_points)
         if imported_count == 0:
             self.iface.messageBar().pushMessage(
                 self._t('Field Guide', 'Guia de Campo'),
@@ -407,6 +469,12 @@ class GuiaDeCampoService:
                 duration=5,
             )
             return
+
+        if import_mode == 'replace':
+            self.marker_tool.clear()
+
+        for latitude, longitude in valid_points:
+            self.marker_tool.add_wgs84_point(latitude, longitude)
 
         if skipped_count > 0:
             self.iface.messageBar().pushMessage(
@@ -449,7 +517,7 @@ class GuiaDeCampoService:
         default_pdf_path = os.path.join(download_dir, 'field_guide.pdf') if download_dir else 'field_guide.pdf'
 
         output_path, _ = QFileDialog.getSaveFileName(
-            None,
+            self._dialog_parent(),
             self._t('Save Field Guide PDF', 'Salvar PDF da Guia de Campo'),
             default_pdf_path,
             'PDF Files (*.pdf)',
@@ -486,3 +554,44 @@ class GuiaDeCampoService:
                 level=Qgis.Warning,
                 duration=4,
             )
+
+    def _choose_import_mode(self, existing_points):
+        """Ask whether CSV import should append to or replace current points."""
+        message_box = QMessageBox(self._dialog_parent())
+        message_box.setIcon(QMessageBox.Question)
+        message_box.setWindowTitle(self._t('Import points CSV', 'Importar pontos CSV'))
+        message_box.setText(
+            self._t(
+                'There are already {} point(s) in this session.'.format(existing_points),
+                'Ja existem {} ponto(s) nesta sessao.'.format(existing_points),
+            )
+        )
+        message_box.setInformativeText(
+            self._t(
+                'Choose whether to append imported points or replace the current list.',
+                'Escolha se deseja adicionar os pontos importados ou substituir a lista atual.',
+            )
+        )
+        append_button = message_box.addButton(
+            self._t('Append', 'Adicionar'),
+            QMessageBox.AcceptRole,
+        )
+        replace_button = message_box.addButton(
+            self._t('Replace', 'Substituir'),
+            QMessageBox.DestructiveRole,
+        )
+        cancel_button = message_box.addButton(
+            self._t('Cancel', 'Cancelar'),
+            QMessageBox.RejectRole,
+        )
+        message_box.setDefaultButton(append_button)
+        message_box.exec_()
+
+        clicked = message_box.clickedButton()
+        if clicked == append_button:
+            return 'append'
+        if clicked == replace_button:
+            return 'replace'
+        if clicked == cancel_button:
+            return None
+        return None
