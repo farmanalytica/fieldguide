@@ -5,39 +5,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Get-MetadataValue {
-    param(
-        [string]$MetadataFile,
-        [string]$Key
-    )
-
-    if (-not (Test-Path $MetadataFile)) {
-        return $null
-    }
-
-    $pattern = "^\s*" + [regex]::Escape($Key) + "\s*=\s*(.+)$"
-    foreach ($line in Get-Content -Path $MetadataFile) {
-        if ($line -match $pattern) {
-            return $Matches[1].Trim()
-        }
-    }
-
-    return $null
-}
-
 $PluginRoot = (Resolve-Path $PluginRoot).Path
 $PluginFolderName = Split-Path -Path $PluginRoot -Leaf
-$MetadataFile = Join-Path $PluginRoot "metadata.txt"
-$Version = Get-MetadataValue -MetadataFile $MetadataFile -Key "version"
-
-if ([string]::IsNullOrWhiteSpace($Version)) {
-    $Version = "dev"
-}
-
 $OutputPath = Join-Path $PluginRoot $OutputDir
 $TempRoot = Join-Path $PluginRoot ".build_tmp"
 $StageRoot = Join-Path $TempRoot $PluginFolderName
-$ZipName = "$PluginFolderName-$Version.zip"
+$ZipName = "$PluginFolderName.zip"
 $ZipPath = Join-Path $OutputPath $ZipName
 
 $excludePatterns = @(
