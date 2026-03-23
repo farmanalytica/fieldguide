@@ -731,8 +731,8 @@ class GuiaDeCampoDialog(QtWidgets.QDialog):
         project_note.setWordWrap(True)
         project_note.setText(
             self._t(
-                'This is a free and open project, developed with support from <a href="https://farmanalytica.com.br">FARM Analytica</a>. Contact us for custom commercial solutions.',
-                'Este e um projeto gratis e aberto, desenvolvido com o apoio da <a href="https://farmanalytica.com.br">FARM Analytica</a>. Entre em contato para solucoes comerciais personalizadas.',
+                'This is a free and open project, developed with support from <a href="https://farmanalytica.com.br">FARM Analytica</a>. Ask about exclusive custom commercial solutions.',
+                'Este e um projeto gratis e aberto, desenvolvido com o apoio da <a href="https://farmanalytica.com.br">FARM Analytica</a>. Fale conosco sobre solucoes comerciais exclusivas e personalizadas.',
             )
         )
         project_note.setTextFormat(_qt_enum('TextFormat', 'RichText', 'RichText'))
