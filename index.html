@@ -383,25 +383,60 @@
 		.sponsor-cta {
 			display: inline-flex;
 			align-items: center;
-			justify-content: center;
+			gap: 0.45rem;
 			width: fit-content;
-			padding: 0.55rem 0.9rem;
-			margin-top: 0.2rem;
-			border-radius: 999px;
-			background: var(--ink);
-			color: #fff !important;
+			margin-top: 0.1rem;
+			color: var(--accent-dark);
 			font-size: 0.88rem;
 			font-weight: 700;
 			text-decoration: none;
-			box-shadow: 0 10px 24px rgba(24, 52, 47, 0.14);
-			transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+			text-underline-offset: 4px;
 		}
 
 		.sponsor-cta:hover,
 		.sponsor-cta:focus-visible {
-			background: var(--accent-dark);
-			transform: translateY(-1px);
-			box-shadow: 0 14px 28px rgba(24, 52, 47, 0.18);
+			color: var(--ink);
+		}
+
+		.sponsor-contact-list {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.55rem;
+			margin-top: 0.1rem;
+		}
+
+		.sponsor-contact {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.45rem;
+			padding: 0.3rem 0.65rem;
+			border-radius: 999px;
+			background: rgba(24, 52, 47, 0.08);
+			color: var(--accent-dark);
+			font-size: 0.84rem;
+			font-weight: 700;
+			text-decoration: none;
+		}
+
+		.sponsor-contact:hover,
+		.sponsor-contact:focus-visible {
+			background: rgba(24, 52, 47, 0.14);
+		}
+
+		.sponsor-contact.whatsapp {
+			background: rgba(35, 179, 58, 0.12);
+			color: #176f2c;
+		}
+
+		.sponsor-contact.whatsapp:hover,
+		.sponsor-contact.whatsapp:focus-visible {
+			background: rgba(35, 179, 58, 0.18);
+		}
+
+		.sponsor-contact-icon {
+			width: 16px;
+			height: 16px;
+			flex: 0 0 auto;
 		}
 
 		footer {
@@ -614,6 +649,13 @@
 						<span class="sponsor-label" data-i18n="sponsor_label">Supported by</span>
 						<strong class="sponsor-name">FARM Analytica</strong>
 						<p data-i18n="sponsor_text">Technology and field intelligence working together to support practical operations.</p>
+						<div class="sponsor-contact-list">
+							<a class="sponsor-contact whatsapp" href="https://api.whatsapp.com/send/?phone=5519992741032&amp;text=Ol%C3%A1%21+Preciso+de+mais+informa%C3%A7%C3%B5es+sobre+os+servi%C3%A7os+da+FARM+Analytica.&amp;type=phone_number&amp;app_absent=0" target="_blank" rel="noopener noreferrer">
+								<img class="sponsor-contact-icon" src="assets/WhatsApp.svg" alt="">
+								<span data-i18n="sponsor_whatsapp">Talk on WhatsApp</span>
+							</a>
+							<a class="sponsor-contact" href="mailto:contato@farmanalytica.com.br">contato@farmanalytica.com.br</a>
+						</div>
 						<a class="sponsor-cta" href="https://farmanalytica.com.br" target="_blank" rel="noopener noreferrer" data-i18n="sponsor_cta">Ask FARM about exclusive custom commercial solutions</a>
 					</div>
 				</div>
@@ -703,6 +745,7 @@
 				about_title: "Sobre o projeto",
 				sponsor_label: "Apoio",
 				sponsor_text: "Tecnologia e inteligência de campo trabalhando juntas para apoiar operações práticas no dia a dia.",
+				sponsor_whatsapp: "Fale no WhatsApp",
 				sponsor_cta: "Fale com a FARM sobre soluções comerciais exclusivas e personalizadas",
 				about_p1: "O Field Guide é um projeto aberto e gratuito, criado para apoiar rotinas de campo com mais clareza e praticidade.",
 				about_p2: "Desenvolvido pela FARM Analytica, com foco em soluções que aproximam tecnologia e trabalho de campo.",
@@ -771,6 +814,7 @@
 				about_title: "About the project",
 				sponsor_label: "Supported by",
 				sponsor_text: "Technology and field intelligence working together to support practical operations.",
+				sponsor_whatsapp: "Talk on WhatsApp",
 				sponsor_cta: "Ask FARM about exclusive custom commercial solutions",
 				about_p1: "Field Guide is a free and open project created to support field routines with more clarity and practicality.",
 				about_p2: "Developed by FARM Analytica, with a focus on solutions that connect technology and field work.",
