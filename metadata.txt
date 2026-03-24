@@ -5,13 +5,13 @@
 [general]
 name=Field Guide
 qgisMinimumVersion=3.0
-description=Field routes, PDF reports, and polygon sampling in QGIS / Rotas de campo, relatorios PDF e amostragem por poligonos no QGIS.
+description=Field routes, PDF reports, polygon sampling, and portable mark export in QGIS / Rotas de campo, relatorios PDF, amostragem por poligonos e exportacao portatil de marcacoes no QGIS.
 version=2.0
 author=Caio Arantes, FARM Analytica
 email=caio.arantes@farmanaltyica.com.br
 qgisMaximumVersion=4.99
 
-about=Capture points in QGIS, delete selected session marks, import and export CSV, open Google Maps routes, generate mobile-friendly PDF reports, and create centroid, grid, spread-optimized, or zigzag sampling patterns inside polygon features. / Capture pontos no QGIS, exclua marcacoes selecionadas da sessao, importe e exporte CSV, abra rotas no Google Maps, gere relatorios PDF mobile-friendly e crie padroes de amostragem por centroide, grade, distribuicao otimizada ou transecto em zig-zag dentro de feicoes poligonais.
+about=Capture points in QGIS, delete selected session marks, import and export CSV, export GPX for handheld GPS devices, add marks as a temporary project point layer, open Google Maps routes, generate mobile-friendly PDF reports, and create centroid, density-based, grid, spread-optimized, or zigzag sampling patterns inside polygon features. / Capture pontos no QGIS, exclua marcacoes selecionadas da sessao, importe e exporte CSV, exporte GPX para aparelhos GPS portateis, adicione marcacoes como camada temporaria de pontos no projeto, abra rotas no Google Maps, gere relatorios PDF mobile-friendly e crie padroes de amostragem por centroide, densidade por area, grade, distribuicao otimizada ou transecto em zig-zag dentro de feicoes poligonais.
 
 tracker=https://github.com/farmanalytica/fieldguide/issues
 repository=https://github.com/farmanalytica/fieldguide
@@ -20,10 +20,10 @@ repository=https://github.com/farmanalytica/fieldguide
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=2.0 - Added polygon feature sampling with configurable marks per feature, centroid/grid/spread-optimized/zigzag methods, selected-mark deletion, and documentation/UI refinements.
+changelog=2.0 - Added polygon feature sampling with fixed-count and density-by-area options, centroid/grid/spread-optimized/zigzag methods, selected-mark deletion, GPX export for GPS devices, temporary point-layer export to the current project, and documentation/UI refinements.
 
 # Tags are comma separated with spaces allowed
-tags=python,qgis,pdf,field guide,guia de campo,csv,google maps,sampling,soil sampling,polygon
+tags=python,qgis,pdf,field guide,guia de campo,csv,gpx,gps,google maps,sampling,soil sampling,polygon
 
 homepage=https://farmanalytica.github.io/fieldguide/
 category=Plugins

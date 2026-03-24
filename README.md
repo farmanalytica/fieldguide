@@ -1,8 +1,8 @@
 # Field Guide 2.0
 
-Field Guide is a QGIS plugin for map point capture, polygon-based sampling, CSV and GPX exchange, Google Maps route opening, and mobile-friendly PDF field reports.
+Field Guide is a QGIS plugin for map point capture, polygon-based sampling, CSV and GPX exchange, temporary point-layer creation, Google Maps route opening, and mobile-friendly PDF field reports.
 
-Version 2.0 expands the plugin from point capture into a fuller field workflow with polygon feature sampling, selected-mark deletion, and improved spatial distribution methods.
+Version 2.0 expands the plugin from point capture into a fuller field workflow with polygon feature sampling, density-based sampling, selected-mark deletion, GPS export, temporary layer output, and improved spatial distribution methods.
 
 ## Highlights
 
@@ -11,19 +11,23 @@ Version 2.0 expands the plugin from point capture into a fuller field workflow w
 - Add manual WGS84 coordinates with validation.
 - Export and import CSV point lists.
 - Export GPS-compatible GPX waypoint files for handheld devices such as Garmin units.
+- Add the current marks to the QGIS project as a temporary point layer.
 - Open ordered Google Maps routes with automatic chunking for longer sessions.
 - Generate PDF reports with canvas snapshot, route links, and per-point mobile links.
-- Generate marks inside polygon features with `1` to `10` marks per feature.
+- Generate marks inside polygon features with fixed counts or density by area.
 
 ## Sampling In 2.0
 
 Field Guide 2.0 adds polygon feature sampling for field and soil workflows.
 
+- `Fixed marks per feature` supports `1` to `50` marks.
 - `1` mark per feature uses the feature centroid.
-- `2` to `10` marks per feature can use:
+- Multi-point sampling can use:
   - `Spread optimized`
   - `Systematic grid`
   - `Zigzag transect`
+- `Density by area` lets you define rules such as `1 mark per hectare` or `1 mark per 3 hectares`.
+- Density mode resolves the mark count per feature from polygon area and still falls back to the centroid when the result is a single mark.
 
 These methods were tuned to improve internal spacing, respect feature shape, and produce more practical field layouts.
 
@@ -53,13 +57,17 @@ These methods were tuned to improve internal spacing, respect feature shape, and
 ### Generate marks from polygon features
 
 1. Select a polygon layer in the `Capture` section.
-2. Choose the number of marks per feature from `1` to `10`.
-3. For `1`, the plugin uses the centroid.
-4. For values above `1`, choose one distribution method:
+2. Choose the sampling quantity mode:
+   - `Fixed marks per feature`
+   - `Density by area`
+3. For fixed counts, choose the number of marks from `1` to `50`.
+4. For density mode, choose the hectares-per-mark rule, such as `1.0 ha` or `3.0 ha`.
+5. For a single mark, the plugin uses the centroid.
+6. For multi-point results, choose one distribution method:
    - `Spread optimized`: stronger spatial spread inside irregular polygons.
    - `Systematic grid`: more even, orientation-aware spacing.
    - `Zigzag transect`: field-style serpentine pattern guided by feature size and shape.
-5. Append to or replace the current session list.
+7. Append to or replace the current session list.
 
 ### CSV and GPX export
 
@@ -71,6 +79,17 @@ These methods were tuned to improve internal spacing, respect feature shape, and
 - Decimal values with `.` or `,` are accepted.
 - GPX export writes WGS84 waypoints with short portable names like `FG001`.
 - When 2 or more points exist, GPX export also includes an ordered route section.
+
+### Add temporary point layer
+
+- `Add Temporary Layer` creates a memory point layer directly in the current QGIS project.
+- The layer geometry uses the current project CRS for convenient map work.
+- Each feature includes:
+  - `order`
+  - `name`
+  - `longitude`
+  - `latitude`
+- Repeated exports create unique layer names instead of overwriting earlier temporary layers.
 
 ### PDF generation
 
@@ -115,8 +134,11 @@ The generated PDF includes:
 ### 2.0
 
 - Added polygon feature sampling with configurable marks per feature.
+- Added density-based polygon sampling using hectares-per-mark rules.
 - Added centroid, spread-optimized, systematic grid, and zigzag transect methods.
 - Added selected-mark deletion from the session list.
+- Added GPX export for GPS handheld compatibility.
+- Added temporary point-layer export directly into the current QGIS project.
 - Improved spatial distribution behavior for zigzag and grid sampling.
 - Refined Portuguese UI wording.
 - Updated documentation, metadata, and website content.
