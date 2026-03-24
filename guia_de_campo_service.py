@@ -572,8 +572,11 @@ class GuiaDeCampoService:
             return []
 
         if distribution_method == self.FEATURE_SAMPLE_METHOD_GRID:
-            targets = self._systematic_grid_targets(candidates, sample_count)
-            selected_points = self._select_points_from_targets(targets, candidates)
+            selected_points = self._systematic_grid_points(
+                sampling_geometry,
+                candidates,
+                sample_count,
+            )
         elif distribution_method == self.FEATURE_SAMPLE_METHOD_ZIGZAG:
             targets = self._zigzag_targets(candidates, sample_count)
             selected_points = self._select_points_from_targets(targets, candidates)
@@ -771,8 +774,8 @@ class GuiaDeCampoService:
         candidates.append(point)
         seen_keys.add(point_key)
 
-    def _systematic_grid_targets(self, candidates, sample_count):
-        """Return an even, orientation-aware grid over the feature footprint."""
+    def _systematic_grid_points(self, geometry, candidates, sample_count):
+        """Return grid-aligned points that preserve shared rows and columns."""
         if not candidates:
             return []
 
@@ -798,23 +801,57 @@ class GuiaDeCampoService:
         row_sizes = self._balanced_row_sizes(sample_count, row_count, column_count)
 
         minor_step = minor_span / float(row_count)
-        targets = []
+        major_step = major_span / float(column_count)
+        column_positions = [
+            major_min + (column_index + 0.5) * major_step
+            for column_index in range(column_count)
+        ]
+        remaining_candidates = list(candidates)
+        selected_points = []
+        selected_keys = set()
         for row_index, row_size in enumerate(row_sizes):
             minor_coord = minor_max - (row_index + 0.5) * minor_step
-            major_step = major_span / float(row_size)
-            for column_index in range(row_size):
-                major_coord = major_min + (column_index + 0.5) * major_step
-                targets.append(
-                    self._point_from_frame(
-                        major_coord,
-                        minor_coord,
-                        origin_point,
-                        axis_x,
-                        axis_y,
-                    )
+            column_indexes = self._grid_slot_indexes(row_size, column_count)
+            for column_index in column_indexes:
+                target_point = self._point_from_frame(
+                    column_positions[column_index],
+                    minor_coord,
+                    origin_point,
+                    axis_x,
+                    axis_y,
                 )
+                point_signature = self._point_signature(target_point)
+                if (
+                    point_signature not in selected_keys
+                    and self._geometry_accepts_point(geometry, target_point)
+                ):
+                    selected_points.append(target_point)
+                    selected_keys.add(point_signature)
+                    remaining_candidates = [
+                        candidate
+                        for candidate in remaining_candidates
+                        if self._point_signature(candidate) != point_signature
+                    ]
+                    continue
 
-        return targets
+                if not remaining_candidates:
+                    continue
+
+                nearest_index = min(
+                    range(len(remaining_candidates)),
+                    key=lambda index: self._distance_squared(
+                        remaining_candidates[index],
+                        target_point,
+                    ),
+                )
+                chosen_point = remaining_candidates.pop(nearest_index)
+                chosen_signature = self._point_signature(chosen_point)
+                if chosen_signature in selected_keys:
+                    continue
+                selected_points.append(chosen_point)
+                selected_keys.add(chosen_signature)
+
+        return selected_points
 
     def _best_grid_dimensions(self, sample_count, aspect_ratio):
         """Choose grid dimensions that fit the feature aspect while staying balanced."""
@@ -850,6 +887,27 @@ class GuiaDeCampoService:
             row_sizes[target_index] += 1
 
         return [min(column_count, max(1, row_size)) for row_size in row_sizes]
+
+    def _grid_slot_indexes(self, slot_count, total_slots):
+        """Return evenly spread slot indexes from a fixed column grid."""
+        if slot_count <= 0 or total_slots <= 0:
+            return []
+        if slot_count >= total_slots:
+            return list(range(total_slots))
+        if slot_count == 1:
+            return [total_slots // 2]
+
+        last_slot_index = total_slots - 1
+        last_point_index = slot_count - 1
+        return [
+            int(round(point_index * last_slot_index / float(last_point_index)))
+            for point_index in range(slot_count)
+        ]
+
+    def _geometry_accepts_point(self, geometry, point):
+        """Return True when the point lies inside or on the polygon boundary."""
+        point_geometry = QgsGeometry.fromPointXY(QgsPointXY(point))
+        return geometry.contains(point_geometry) or geometry.intersects(point_geometry)
 
     def _zigzag_targets(self, candidates, sample_count):
         """Return classic zigzag targets using the feature's long axis and side edges."""
