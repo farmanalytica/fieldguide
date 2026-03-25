@@ -5,7 +5,7 @@
 [general]
 name=Field Guide
 qgisMinimumVersion=3.0
-description=Field routes, PDF reports, polygon sampling, and portable mark export in QGIS / Rotas de campo, relatorios PDF, amostragem por poligonos e exportacao portatil de marcacoes no QGIS.
+description=Rotas de campo, amostragem por poligonos, exportacao CSV/GPX, camada temporaria e relatorios PDF no QGIS / Field routes, polygon sampling, CSV/GPX export, temporary layers, and PDF reports in QGIS.
 version=2.0
 author=Caio Arantes, FARM Analytica
 email=caio.arantes@farmanaltyica.com.br

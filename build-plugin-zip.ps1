@@ -4,6 +4,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $PluginRoot = (Resolve-Path $PluginRoot).Path
 $PluginFolderName = Split-Path -Path $PluginRoot -Leaf
@@ -53,11 +55,25 @@ if (-not (Test-Path $StageLicense) -and (Test-Path $StageLicenseTxt)) {
     Copy-Item -Path $StageLicenseTxt -Destination $StageLicense -Force
 }
 
+# Remove Python bytecode caches so the package is accepted by the QGIS repo.
+Get-ChildItem -Path $StageRoot -Recurse -Force |
+    Where-Object { -not $_.PSIsContainer -and $_.Extension -in @('.pyc', '.pyo') } |
+    Remove-Item -Force
+Get-ChildItem -Path $StageRoot -Recurse -Force -Directory |
+    Where-Object { $_.Name -eq '__pycache__' } |
+    Sort-Object FullName -Descending |
+    Remove-Item -Recurse -Force
+
 if (Test-Path $ZipPath) {
     Remove-Item -Path $ZipPath -Force
 }
 
-Compress-Archive -Path (Join-Path $TempRoot $PluginFolderName) -DestinationPath $ZipPath -CompressionLevel Optimal
+[System.IO.Compression.ZipFile]::CreateFromDirectory(
+    $TempRoot,
+    $ZipPath,
+    [System.IO.Compression.CompressionLevel]::Optimal,
+    $false
+)
 
 Remove-Item -Path $TempRoot -Recurse -Force
 
