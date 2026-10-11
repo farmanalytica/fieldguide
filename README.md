@@ -1,5 +1,10 @@
 # Field Guide 2.0
 
+> **Superseded by [farm_tools](https://github.com/farmanalytica/farm_tools).**
+> This plugin's codebase has been unified into farm_tools, where its sampling
+> and field-report functionality is maintained as the **Field Guide** module.
+> This repository is kept for historical reference and is no longer updated.
+
 Field Guide is a QGIS plugin for map point capture, polygon-based sampling, CSV and GPX exchange, temporary point-layer creation, Google Maps route opening, and mobile-friendly PDF field reports.
 
 Version 2.0 expands the plugin from point capture into a fuller field workflow with polygon feature sampling, density-based sampling, selected-mark deletion, GPS export, temporary layer output, and improved spatial distribution methods.
